@@ -1,0 +1,1 @@
+web: gunicorn parrotTime_django.wsgi --log-file -
