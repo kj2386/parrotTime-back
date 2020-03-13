@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,6 +8,9 @@ from django.shortcuts import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from .serializers import ParrotSerializer, OrderSerializer
 from .models import Parrot, OrderItem, Order
+import stripe
+
+stripe.api_key = 
 
 
 class ParrotList(generics.ListAPIView):
@@ -53,3 +57,67 @@ class OrderDetailView(generics.RetrieveAPIView):
             return order
         except ObjectDoesNotExist:
             return Response({'message': 'You do not have an active order.'}, status=HTTP_400_BAD_REQUEST)
+
+
+class PaymentView(APIView):
+    def post(self, request, *args, **kwargs):
+        order = Order.objects.get(user=self.request.user, ordered=False)
+        token = request.data.get('stripeToken')
+        save = False
+        use_default = False
+
+        amount = int(order.get_total() * 100)
+
+        try:
+            charge = stripe.Charge.create(
+                amount=amount,
+                currency="usd",
+                source=token
+            )
+
+            order_parrots = order.parrots.all()
+            order_parrots.update(ordered=True)
+            for parrot in order_parrots:
+                parrot.save()
+
+            order.ordered = True
+           
+            order.save()
+
+            return Response(status=HTTP_200_OK)
+
+        except stripe.error.CardError as e:
+            body = e.json_body
+            err = body.get('error', {})
+            return Response({"message": f"{err.get('message')}"}, status=HTTP_400_BAD_REQUEST)
+
+        except stripe.error.RateLimitError as e:
+            # Too many requests made to the API too quickly
+            messages.warning(self.request, "Rate limit error")
+            return Response({"message": "Rate limit error"}, status=HTTP_400_BAD_REQUEST)
+
+        except stripe.error.InvalidRequestError as e:
+            print(e)
+            # Invalid parameters were supplied to Stripe's API
+            return Response({"message": "Invalid parameters"}, status=HTTP_400_BAD_REQUEST)
+
+        except stripe.error.AuthenticationError as e:
+            # Authentication with Stripe's API failed
+            # (maybe you changed API keys recently)
+            return Response({"message": "Not authenticated"}, status=HTTP_400_BAD_REQUEST)
+
+        except stripe.error.APIConnectionError as e:
+            # Network communication with Stripe failed
+            return Response({"message": "Network error"}, status=HTTP_400_BAD_REQUEST)
+
+        except stripe.error.StripeError as e:
+            # Display a very generic error to the user, and maybe send
+            # yourself an email
+            return Response({"message": "Something went wrong. You were not charged. Please try again."}, status=HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # send an email to ourselves
+            print(e)
+            return Response({"message": "A serious error occurred. We have been notifed."}, status=HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Invalid data received"}, status=HTTP_400_BAD_REQUEST)
