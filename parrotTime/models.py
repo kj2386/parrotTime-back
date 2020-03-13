@@ -22,6 +22,8 @@ class OrderItem(models.Model):
     def __str__(self):
         return f'{self.quantity} of {self.parrot.name}'
 
+    
+
 
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -31,3 +33,9 @@ class Order(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    def get_total(self):
+        total = 0
+        for order_parrot in self.parrots.all():
+            total += order_parrot.quantity
+            return total

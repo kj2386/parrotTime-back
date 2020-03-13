@@ -1,9 +1,11 @@
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
-from .serializers import ParrotSerializer
+from .serializers import ParrotSerializer, OrderSerializer
 from .models import Parrot, OrderItem, Order
 
 
@@ -39,3 +41,15 @@ class AddToCart(APIView):
             )
             order.parrots.add(order_parrot)
             return Response(status=HTTP_200_OK)
+
+
+class OrderDetailView(generics.RetrieveAPIView):
+    serializer_class = OrderSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        try:
+            order = Order.objects.get(user=self.request.user, ordered=False)
+            return order
+        except ObjectDoesNotExist:
+            return Response({'message': 'You do not have an active order.'}, status=HTTP_400_BAD_REQUEST)
