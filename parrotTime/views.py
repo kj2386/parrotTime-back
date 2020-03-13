@@ -10,7 +10,7 @@ from .serializers import ParrotSerializer, OrderSerializer
 from .models import Parrot, OrderItem, Order
 import stripe
 
-stripe.api_key = 
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class ParrotList(generics.ListAPIView):
@@ -81,7 +81,7 @@ class PaymentView(APIView):
                 parrot.save()
 
             order.ordered = True
-           
+
             order.save()
 
             return Response(status=HTTP_200_OK)
