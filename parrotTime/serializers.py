@@ -1,8 +1,11 @@
 from rest_framework import serializers
-from .models import Parrot
+from .models import Parrot, OrderItem, Order
+
 
 class ParrotSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Parrot
-        fields = ('id', 'name', 'slug', 'price', 'gif_url')
+        fields = ('name', 'slug', 'price', 'gif_url',)
+
+

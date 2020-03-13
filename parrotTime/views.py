@@ -1,7 +1,41 @@
 from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from .serializers import ParrotSerializer
-from .models import Parrot
+from .models import Parrot, OrderItem, Order
 
-class ParrotList(generics.ListCreateAPIView):
+
+class ParrotList(generics.ListAPIView):
     queryset = Parrot.objects.all()
     serializer_class = ParrotSerializer
+
+
+class AddToCart(APIView):
+    def post(self, request, *args, **kwards):
+        slug = request.data.get('slug', None)
+        if slug is None:
+            return Response({'message': 'Ivalid request'}, status=HTTP_400_BAD_REQUEST)
+        parrot = get_object_or_404(Parrot, slug=slug)
+        order_parrot, created = OrderItem.objects.get_or_create(
+            parrot=parrot,
+            user=request.user,
+            ordered=False
+        )
+        order_qs = Order.objects.filter(user=request.user, ordered=False)
+        if order_qs.exists():
+            order = order_qs[0]
+            if order.parrots.filter(parrot__slug=parrot.slug).exists():
+                order_parrot.quantity += 1
+                order_parrot.save()
+                return Response(status=HTTP_200_OK)
+            else:
+                order.parrots.add(order_parrot)
+                return Response(status=HTTP_200_OK)
+        else:
+            order = Order.objects.create(
+                user=request.user
+            )
+            order.parrots.add(order_parrot)
+            return Response(status=HTTP_200_OK)

@@ -1,7 +1,5 @@
 from django.db import models
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from django.conf import settings
 
 
 class Parrot(models.Model):
@@ -14,21 +12,22 @@ class Parrot(models.Model):
         return self.name
 
 
-class Cart(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class OrderItem(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    ordered = models.BooleanField(default=False)
     parrot = models.ForeignKey(Parrot, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
-    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f'{self.quantity} of {self.parrot.name}'
 
 
 class Order(models.Model):
-    order_items = models.ManyToManyField(Cart)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    parrots = models.ManyToManyField(OrderItem)
     ordered = models.BooleanField(default=False)
-    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.user.username
