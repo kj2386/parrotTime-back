@@ -22,8 +22,6 @@ class OrderItem(models.Model):
     def __str__(self):
         return f'{self.quantity} of {self.parrot.name}'
 
-    
-
 
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -39,3 +37,19 @@ class Order(models.Model):
         for order_parrot in self.parrots.all():
             total += order_parrot.quantity
             return total
+
+
+class Address(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    street_address = models.CharField(max_length=100)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=2)
+    zip = models.IntegerField()
+    default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.user.username
+
+    class Meta:
+        verbose_name_plural = 'Addresses'
