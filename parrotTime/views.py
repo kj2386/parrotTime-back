@@ -146,3 +146,14 @@ class AddressCreateView(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = AddressSerializer
     queryset = Address.objects.all()
+
+
+class AddressUpdateView(generics.UpdateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AddressSerializer
+    queryset = Address.objects.all()
+
+
+class AddressDeleteView(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = Address.objects.all()
