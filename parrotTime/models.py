@@ -1,6 +1,10 @@
 from django.db import models
 from django.conf import settings
 
+ADDRESS_CHOICES = (
+    ('B', 'Billing'),
+    ('S', 'Shipping'),
+)
 
 class Parrot(models.Model):
     name = models.CharField(max_length=100)
@@ -46,6 +50,7 @@ class Address(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=2)
     zip = models.IntegerField()
+    address_type = models.CharField(max_length=1, choices=ADDRESS_CHOICES)
     default = models.BooleanField(default=False)
 
     def __str__(self):

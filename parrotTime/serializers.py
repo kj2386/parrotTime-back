@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Parrot, OrderItem, Order
+from .models import Parrot, OrderItem, Order, Address
 
 
 class StringSerializer(serializers.StringRelatedField):
@@ -39,3 +39,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_total(self, obj):
         return obj.get_total()
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = ('id', 'user', 'street_address', 'city', 'state',
+                  'zip', 'address_type', 'default',)

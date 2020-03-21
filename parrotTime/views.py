@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http import Http404
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,11 +7,16 @@ from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
-from .serializers import ParrotSerializer, OrderSerializer
-from .models import Parrot, OrderItem, Order
+from .serializers import ParrotSerializer, OrderSerializer, AddressSerializer
+from .models import Parrot, OrderItem, Order, Address
 import stripe
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+class UserIdView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response({'userId': request.user.id}, status=HTTP_200_OK)
 
 
 class ParrotList(generics.ListAPIView):
@@ -56,7 +62,8 @@ class OrderDetailView(generics.RetrieveAPIView):
             order = Order.objects.get(user=self.request.user, ordered=False)
             return order
         except ObjectDoesNotExist:
-            return Response({'message': 'You do not have an active order.'}, status=HTTP_400_BAD_REQUEST)
+            raise Http404('You do not have an active order.')
+            # return Response({'message': }, status=HTTP_400_BAD_REQUEST)
 
 
 class PaymentView(APIView):
@@ -121,3 +128,21 @@ class PaymentView(APIView):
             return Response({"message": "A serious error occurred. We have been notifed."}, status=HTTP_400_BAD_REQUEST)
 
         return Response({"message": "Invalid data received"}, status=HTTP_400_BAD_REQUEST)
+
+
+class AddressListView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AddressSerializer
+
+    def get_queryset(self):
+        address_type = self.request.query_params.get('address_type', None)
+        qs = Address.objects.all()
+        if address_type is None:
+            return qs
+        return qs.filter(user=self.request.user, address_type=address_type)
+
+
+class AddressCreateView(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = AddressSerializer
+    queryset = Address.objects.all()
