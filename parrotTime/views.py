@@ -24,6 +24,11 @@ class ParrotList(generics.ListAPIView):
     serializer_class = ParrotSerializer
 
 
+class OrderItemDeleteView(generics.DestroyAPIView):
+    permission_classes = (IsAuthenticated,)
+    queryset = OrderItem.objects.all()
+
+
 class AddToCart(APIView):
     def post(self, request, *args, **kwards):
         slug = request.data.get('slug', None)
