@@ -6,9 +6,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from .serializers import ParrotSerializer, OrderSerializer, AddressSerializer, PaymentSerializer
-from .models import Parrot, OrderItem, Order, Address
+from .models import Parrot, OrderItem, Order, Address, Payment, UserProfile
 import stripe
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -65,26 +66,35 @@ class AddToCart(APIView):
         slug = request.data.get('slug', None)
         if slug is None:
             return Response({'message': 'Ivalid request'}, status=HTTP_400_BAD_REQUEST)
+
         parrot = get_object_or_404(Parrot, slug=slug)
-        order_parrot, created = OrderItem.objects.get_or_create(
-            parrot=parrot,
-            user=request.user,
-            ordered=False
-        )
+
+        order_parrot_qs = OrderItem.objects.filter(
+            parrot=parrot, user=request.user, ordered=False)
+
+        if order_parrot_qs.exists():
+            order_parrot = order_parrot_qs.first()
+            order_parrot.quantity += 1
+            order_parrot.save()
+        else:
+            order_parrot = OrderItem.objects.create(
+                parrot=parrot,
+                user=request.user,
+                ordered=False
+            )
+            order_parrot.save()
+
         order_qs = Order.objects.filter(user=request.user, ordered=False)
         if order_qs.exists():
             order = order_qs[0]
-            if order.parrots.filter(parrot__slug=parrot.slug).exists():
-                order_parrot.quantity += 1
-                order_parrot.save()
-                return Response(status=HTTP_200_OK)
-            else:
+            if not order.parrots.filter(parrot__id=order_parrot.id).exists():
                 order.parrots.add(order_parrot)
                 return Response(status=HTTP_200_OK)
+
         else:
+            ordered_date = timezone.now()
             order = Order.objects.create(
-                user=request.user
-            )
+                user=request.user, ordered_date=ordered_date)
             order.parrots.add(order_parrot)
             return Response(status=HTTP_200_OK)
 
@@ -105,9 +115,27 @@ class OrderDetailView(generics.RetrieveAPIView):
 class PaymentView(APIView):
     def post(self, request, *args, **kwargs):
         order = Order.objects.get(user=self.request.user, ordered=False)
+        userprofile = UserProfile.objects.get(user=self.request.user)
         token = request.data.get('stripeToken')
-        save = False
-        use_default = False
+        billing_address_id = request.data.get('selectedBillingAddress')
+        shipping_address_id = request.data.get('selectedShippingAddress')
+
+        billing_address = Address.objects.get(id=billing_address_id)
+        shipping_address = Address.objects.get(id=shipping_address_id)
+
+        if userprofile.stripe_customer_id != '' and userprofile.stripe_customer_id is not None:
+            customer = stripe.Customer.retrieve(
+                userprofile.stripe_customer_id)
+            customer.sources.create(source=token)
+
+        else:
+            customer = stripe.Customer.create(
+                email=self.request.user.email,
+            )
+            customer.sources.create(source=token)
+            userprofile.stripe_customer_id = customer['id']
+            userprofile.one_click_purchasing = True
+            userprofile.save()
 
         amount = int(order.get_total() * 100)
 
@@ -115,8 +143,14 @@ class PaymentView(APIView):
             charge = stripe.Charge.create(
                 amount=amount,
                 currency="usd",
-                source=token
+                customer=userprofile.stripe_customer_id
             )
+
+            payment = Payment()
+            payment.stripe_charge_id = charge['id']
+            payment.user = self.request.user
+            payment.amount = order.get_total()
+            payment.save()
 
             order_parrots = order.parrots.all()
             order_parrots.update(ordered=True)
@@ -124,7 +158,9 @@ class PaymentView(APIView):
                 parrot.save()
 
             order.ordered = True
-
+            order.payment = payment
+            order.billing_address = billing_address
+            order.shipping_address = shipping_address
             order.save()
 
             return Response(status=HTTP_200_OK)
