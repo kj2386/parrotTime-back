@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Parrot, OrderItem, Order, Address
+from .models import Parrot, OrderItem, Order, Address, Payment
 
 
 class StringSerializer(serializers.StringRelatedField):
@@ -46,3 +46,13 @@ class AddressSerializer(serializers.ModelSerializer):
         model = Address
         fields = ('id', 'user', 'street_address', 'city', 'state',
                   'zip', 'address_type', 'default',)
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = (
+            'id',
+            'amount',
+            'timestamp'
+        )

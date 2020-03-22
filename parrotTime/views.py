@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
-from .serializers import ParrotSerializer, OrderSerializer, AddressSerializer
+from .serializers import ParrotSerializer, OrderSerializer, AddressSerializer, PaymentSerializer
 from .models import Parrot, OrderItem, Order, Address
 import stripe
 
@@ -193,3 +193,11 @@ class AddressUpdateView(generics.UpdateAPIView):
 class AddressDeleteView(generics.DestroyAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Address.objects.all()
+
+
+class PaymentListView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated, )
+    serializer_class = PaymentSerializer
+
+    def get_queryset(self):
+        return Payment.objects.filter(user=self.request.user)
