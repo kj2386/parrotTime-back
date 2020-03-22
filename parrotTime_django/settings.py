@@ -77,6 +77,7 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:3000',
+    'https://parrottime.herokuapp.com/'
 )
 
 ROOT_URLCONF = 'parrotTime_django.urls'
