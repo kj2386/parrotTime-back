@@ -110,13 +110,9 @@ WSGI_APPLICATION = 'parrotTime_django.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'parrottime',
-        'USER': 'parrottimeuser',
-        'PASSWORD': 'parrotTime',
-        'HOST': 'localhost'
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL')
+    )
 }
 
 
