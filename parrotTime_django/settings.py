@@ -26,7 +26,7 @@ SECRET_KEY = 'po+auyw!yur&ky&dej$#ww9=3+3j*9oa%x)mu^u+1vup$_t$^)'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['parrottime-back-app.herokuapp.com']
 
 
 # Application definition
