@@ -24,6 +24,37 @@ class ParrotList(generics.ListAPIView):
     serializer_class = ParrotSerializer
 
 
+class OrderQuantityUpdateView(APIView):
+    def post(self, request, *args, **kwargs):
+        slug = request.data.get('slug', None)
+        if slug is None:
+            return Response({"message": "Invalid data"}, status=HTTP_400_BAD_REQUEST)
+        parrot = get_object_or_404(Parrot, slug=slug)
+        order_qs = Order.objects.filter(
+            user=request.user,
+            ordered=False
+        )
+        if order_qs.exists():
+            order = order_qs[0]
+
+            if order.parrots.filter(parrot__slug=parrot.slug).exists():
+                order_parrot = OrderItem.objects.filter(
+                    parrot=parrot,
+                    user=request.user,
+                    ordered=False
+                )[0]
+                if order_parrot.quantity > 1:
+                    order_parrot.quantity -= 1
+                    order_parrot.save()
+                else:
+                    order.parrots.remove(order_parrot)
+                return Response(status=HTTP_200_OK)
+            else:
+                return Response({"message": "This parrot was not in your cart"}, status=HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"message": "You do not have an active order"}, status=HTTP_400_BAD_REQUEST)
+
+
 class OrderItemDeleteView(generics.DestroyAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = OrderItem.objects.all()
